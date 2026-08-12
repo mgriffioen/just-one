@@ -566,7 +566,7 @@ html, body {
   font-size: 28px; font-weight: 800; color: #1c1a3a;
 }
 .brand h1 { margin: 0; font-size: 30px; letter-spacing: -0.02em; }
-.brand h1 em { color: var(--accent-2); font-style: italic; }
+.brand h1 em, .how-to summary em { color: var(--accent-2); font-style: italic; }
 .tagline { color: var(--text-dim); margin: 4px 0 0; font-size: 14px; }
 
 .card {
