@@ -243,6 +243,14 @@ class Room {
       correct,
       total,
       rating: total > 0 ? ratingFor(correct, total) : '',
+      rounds: this.history.map((h) => ({
+        round: h.round,
+        word: h.word,
+        correct: h.correct,
+        passed: h.passed,
+        guess: h.guess,
+        activePlayer: h.activePlayer
+      })),
       players: this.players.map((p) => ({
         id: p.id,
         name: p.name,
