@@ -1,4 +1,4 @@
-const { createWordDeck } = require('./words');
+const { createWordDeck, WORDS } = require('./words');
 
 const MIN_PLAYERS = 3;
 const MAX_PLAYERS = 8;
@@ -44,6 +44,7 @@ class Room {
     this.totalRounds = ROUND_OPTIONS.includes(totalRounds) ? totalRounds : DEFAULT_ROUNDS;
     this.roundNumber = 0; // 1-indexed once started
     this.activePlayerIndex = -1;
+    this.recentWords = []; // words this room has already played, across games
     this.deck = createWordDeck();
     this.currentWord = null;
     this.clues = {}; // playerId -> { text, status: 'pending'|'valid'|'duplicate'|'invalid' }
@@ -106,6 +107,7 @@ class Room {
     this.roundNumber += 1;
     this.activePlayerIndex = (this.activePlayerIndex + 1) % this.players.length;
     this.currentWord = this.deck.pop();
+    this.rememberWord(this.currentWord);
     this.clues = {};
     this.guess = null;
     this.lastResult = null;
@@ -116,6 +118,18 @@ class Room {
     });
     this.status = 'clue';
     this.touch();
+  }
+
+  // Tracks what this room has already served so a later game in the same room
+  // doesn't repeat it. Capped at half the word list, so a room that plays all
+  // night still always has a large pool of unplayed words to draw from.
+  rememberWord(word) {
+    if (!word) return;
+    this.recentWords.push(word);
+    const cap = Math.floor(WORDS.length / 2);
+    if (this.recentWords.length > cap) {
+      this.recentWords = this.recentWords.slice(-cap);
+    }
   }
 
   submitClue(playerId, text) {
@@ -225,7 +239,9 @@ class Room {
     this.status = 'lobby';
     this.roundNumber = 0;
     this.activePlayerIndex = -1;
-    this.deck = createWordDeck();
+    // recentWords deliberately survives the reset — that's what stops a new
+    // game in this room from serving up the words they just played.
+    this.deck = createWordDeck(this.recentWords);
     this.currentWord = null;
     this.clues = {};
     this.guess = null;
