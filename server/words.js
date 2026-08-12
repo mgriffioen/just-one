@@ -6,7 +6,7 @@ const WORDS = [
   'lake', 'fireworks', 'beer', 'raft', 'slide', 'license plate', 'shark', 
   'hot dog', 'ribs', 'kubb', 'waterworld', 'the water', 'shangri-la', 'omp', 
   'dune', 'spiral', 'nice', 'bocce', 'erik', 'benedict', 'mark', 'sean', 
-  'carl', 'dusty', 'paul', 'brandon', 'cigarrette',
+  'carl', 'dusty', 'paul', 'brandon', 'cigarette',
 
   // Everyday objects
   'umbrella', 'toothbrush', 'backpack', 'candle', 'mirror', 'blanket', 'ladder',
