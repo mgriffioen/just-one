@@ -82,6 +82,31 @@ public/
   index.html Single-page app shell (all screens, mobile-first)
   styles.css Dark, mobile-first party theme
   app.js     Client state machine driven by the server's per-player view
+  share-card.png  1200x630 social preview image
+tools/
+  share-card.html Source for share-card.png
+```
+
+## Social preview
+
+Pasting the game's link into a group chat is how most people will invite
+their friends, so `index.html` carries Open Graph and Twitter card tags
+plus a 1200x630 preview image (`public/share-card.png`).
+
+Those tags need *absolute* URLs, and this app has no fixed domain — it
+runs wherever you host it, including a bare LAN IP. So the server fills
+in a `__BASE_URL__` placeholder from each request's scheme and `Host`
+header when it serves `index.html`. Nothing to configure on deploy; it
+works out of the box on any host. (`trust proxy` is enabled so the scheme
+is right behind Render/Fly/Railway's TLS termination, and an unexpected
+`Host` value falls back to relative URLs.)
+
+To regenerate the image after editing `tools/share-card.html` — it's a
+standalone file with no dependencies, so any headless browser will do:
+
+```bash
+npx playwright screenshot --viewport-size=1200,630 \
+  tools/share-card.html public/share-card.png
 ```
 
 ## Game rules notes / house rules
