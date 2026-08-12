@@ -91,6 +91,9 @@ public/
 - A clue must be a single word (no spaces) — the client and server both
   enforce this.
 - Duplicate clues are matched case-insensitively.
+- A room never serves the same secret word twice — including across
+  **"play again"** — until it has worked through most of the list, so a
+  group playing several games in a row keeps getting fresh words.
 - The host can tap **"reveal clues now"** during the clue phase to skip
   waiting on a straggler, and controls advancing to the next round.
 - If a player's phone disconnects (locks, drops wifi), the game keeps
