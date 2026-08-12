@@ -579,7 +579,7 @@ html, body {
 }
 .card.center { text-align: center; align-items: center; }
 
-form, #create-options, #join-options { display: flex; flex-direction: column; gap: 12px; }
+form, #create-options, #join-options, #clue-submitted { display: flex; flex-direction: column; gap: 12px; }
 
 h2 { margin: 0; font-size: 22px; }
 h3 { margin: 0; font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); }
