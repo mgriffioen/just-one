@@ -5,7 +5,7 @@ const WORDS = [
   // Shangri-La
   'lake', 'fireworks', 'beer', 'raft', 'slide', 'license plate', 'shark', 
   'hot dog', 'ribs', 'kubb', 'waterworld', 'the water', 'shangri-la', 'omp', 
-  'dune', 'spiral', 'nice', 'bocce', 'erik', 'benedict', 'mark', 'sean', 
+  'dune', 'perfect spiral', 'nice', 'bocce', 'erik', 'benedict', 'mark', 'sean', 
   'carl', 'dusty', 'paul', 'brandon', 'cigarette',
 
   // Everyday objects
