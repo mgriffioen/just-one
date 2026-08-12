@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>JUST clONE — social share card source</title>
+<!--
+  Source for public/share-card.png (the og:image / Twitter card image).
+
+  This is a standalone file with no dependencies: open it in a browser and
+  screenshot the 1200x630 .card element, or render it headlessly, e.g.
+
+    npx playwright screenshot --viewport-size=1200,630 \
+      tools/share-card.html public/share-card.png
+
+  Colours are copied from public/styles.css so the card matches the app.
+-->
+<style>
+  :root {
+    --bg: #14122b;
+    --bg-alt: #1c1a3a;
+    --card: #232049;
+    --card-border: #34305f;
+    --text: #f4f2ff;
+    --text-dim: #b7b1d9;
+    --accent: #ff6b6b;
+    --accent-2: #ffd166;
+    --good: #52d68a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1200px;
+    height: 630px;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+    color: var(--text);
+    background: radial-gradient(circle at 30% 0%, var(--bg-alt), var(--bg) 65%);
+  }
+  .card {
+    position: relative;
+    width: 1200px;
+    height: 630px;
+    display: flex;
+    align-items: center;
+    gap: 48px;
+    padding: 64px;
+  }
+
+  /* Starfield, same idea as the app: one 0-size element, many box-shadows. */
+  .stars {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    opacity: 0.5;
+    box-shadow:
+      266px 269px #fff, 416px 22px #fff, 765px 525px #fff, 443px 31px #fff,
+      126px 318px #fff, 1026px 585px #fff, 217px 516px #fff, 395px 550px #fff,
+      616px 309px #fff, 1098px 144px #fff, 539px 451px #fff, 667px 3px #fff,
+      341px 50px #fff, 1083px 202px #fff, 62px 122px #fff, 950px 401px #fff,
+      148px 604px #fff, 872px 88px #fff, 700px 210px #fff, 511px 617px #fff,
+      1150px 340px #fff, 36px 442px #fff, 806px 372px #fff, 604px 121px #fff,
+      982px 268px #fff, 300px 401px #fff, 1170px 60px #fff, 88px 240px #fff;
+  }
+  .stars.big {
+    width: 3px;
+    height: 3px;
+    opacity: 0.85;
+    box-shadow:
+      180px 120px #fff, 1040px 480px #fff, 620px 60px #fff, 330px 560px #fff,
+      900px 180px #fff, 740px 430px #fff, 120px 400px #fff, 1130px 250px #fff;
+  }
+
+  .left { position: relative; flex: 1; }
+  .badge {
+    width: 104px;
+    height: 104px;
+    border-radius: 30px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 58px;
+    font-weight: 800;
+    color: #1c1a3a;
+    margin-bottom: 30px;
+  }
+  h1 {
+    font-size: 92px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+  }
+  h1 em { font-style: italic; color: var(--accent-2); }
+  .tagline {
+    font-size: 32px;
+    color: var(--text-dim);
+    margin-top: 20px;
+    white-space: nowrap;
+  }
+  .facts {
+    margin-top: 40px;
+    display: flex;
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .fact {
+    font-size: 20px;
+    font-weight: 700;
+    padding: 11px 18px;
+    border-radius: 999px;
+    background: #2a2657;
+    color: var(--text-dim);
+  }
+
+  /* Right: a miniature of the guess screen, showing the signature rule — a
+     clue that got duplicated is struck out before the guesser ever sees it. */
+  .right { position: relative; width: 400px; flex: none; }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 28px;
+    padding: 30px;
+    transform: rotate(2.5deg);
+    box-shadow: 0 30px 60px #0006;
+  }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    font-size: 16px;
+    color: var(--text-dim);
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .clue {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #100e26;
+    border-radius: 16px;
+    padding: 17px 22px;
+    margin-bottom: 12px;
+    font-size: 30px;
+    font-weight: 700;
+  }
+  .clue .who { font-size: 20px; }
+  .clue.gone { opacity: 0.45; text-decoration: line-through; }
+  .guess {
+    margin-top: 22px;
+    text-align: center;
+    font-size: 26px;
+    color: var(--text-dim);
+  }
+  .guess strong { color: var(--good, #52d68a); font-size: 34px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="stars"></div>
+    <div class="stars big"></div>
+
+    <div class="left">
+      <div class="badge">1</div>
+      <h1>JUST <em>cl</em>ONE</h1>
+      <p class="tagline">You give a clue, they take a guess.</p>
+      <div class="facts">
+        <span class="fact">3–8 players</span>
+        <span class="fact">No app install</span>
+        <span class="fact">Free &amp; open source</span>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="panel">
+        <p class="eyebrow">Clues for Ada</p>
+        <div class="clue"><span>lava</span><span class="who">🦊</span></div>
+        <div class="clue gone"><span>erupt</span><span class="who">🐱</span></div>
+        <div class="clue gone"><span>erupt</span><span class="who">🐶</span></div>
+        <div class="clue"><span>crater</span><span class="who">🐻</span></div>
+        <p class="guess">Ada guessed<br /><strong>volcano</strong> 🎉</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

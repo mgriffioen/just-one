@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const express = require('express');
 const { Server } = require('socket.io');
@@ -11,7 +12,35 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(path.join(__dirname, '..', 'public')));
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+const INDEX_PATH = path.join(PUBLIC_DIR, 'index.html');
+
+// Render/Fly/Railway terminate TLS in front of us, so without this req.protocol
+// always reports "http" and the share links would advertise the wrong scheme.
+app.set('trust proxy', true);
+
+// The Open Graph / Twitter tags in index.html need absolute URLs, but this app
+// has no fixed domain — it's self-hosted wherever you put it, including a LAN
+// IP. So the base URL is resolved per request instead of being baked into the
+// file. Falls back to relative URLs if the Host header isn't a plain hostname.
+function baseUrlFor(req) {
+  const host = String(req.get('host') || '');
+  const isPlainHost = /^[a-z0-9.-]+(:\d+)?$/i.test(host);
+  const isIpv6Host = /^\[[0-9a-f:]+\](:\d+)?$/i.test(host);
+  if (!isPlainHost && !isIpv6Host) return '';
+  return `${req.protocol}://${host}`;
+}
+
+function serveIndex(req, res, next) {
+  fs.readFile(INDEX_PATH, 'utf8', (err, html) => {
+    if (err) return next(err);
+    res.type('html').send(html.replace(/__BASE_URL__/g, baseUrlFor(req)));
+  });
+}
+
+app.get('/', serveIndex);
+app.get('/index.html', serveIndex);
+app.use(express.static(PUBLIC_DIR, { index: false }));
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 const manager = new RoomManager();
