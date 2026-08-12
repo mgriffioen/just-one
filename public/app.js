@@ -419,6 +419,30 @@
     $('final-score').textContent = `${s.correct} / ${s.total}`;
     $('final-rating').textContent = s.rating;
 
+    const words = $('final-words');
+    words.innerHTML = '';
+    const rounds = s.rounds || [];
+    if (rounds.length === 0) {
+      const li = document.createElement('li');
+      li.textContent = 'No rounds were played.';
+      words.appendChild(li);
+    } else {
+      rounds.forEach((r) => {
+        const li = document.createElement('li');
+        if (!r.correct) li.classList.add('missed');
+        const guesser = r.activePlayer || {};
+        let outcome;
+        if (r.correct) outcome = 'guessed it';
+        else if (r.passed) outcome = 'passed';
+        else outcome = `said "${escapeHtml(r.guess)}"`;
+        li.innerHTML = `<span class="round-num">${r.round}</span>` +
+          `<span class="final-word">${escapeHtml(r.word)}</span>` +
+          `<span class="round-outcome">${r.correct ? '✅' : '❌'} ` +
+          `${guesser.icon || ''} ${escapeHtml(guesser.name || '')} ${outcome}</span>`;
+        words.appendChild(li);
+      });
+    }
+
     const list = $('final-players');
     list.innerHTML = '';
     const sorted = [...s.players].sort((a, b) => b.correctAsActive - a.correctAsActive || b.cluesAccepted - a.cluesAccepted);

@@ -22,8 +22,10 @@ JUST *cl*ONE is fully cooperative. Each round:
    host's choice) were guessed correctly. Everyone rotates through being
    the guesser.
 
-At the end, everyone sees the team's final score plus a per-player
-breakdown (icon, name, correct guesses as guesser, valid clues given).
+At the end, everyone sees the team's final score, a recap of every secret
+word from the round (with who was guessing and how it went), plus a
+per-player breakdown (icon, name, correct guesses as guesser, valid clues
+given).
 
 This project ships its own original word list (`server/words.js`) rather
 than reusing the commercial game's card content.
