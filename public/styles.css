@@ -612,6 +612,8 @@ h3 { margin: 0; font-size: 15px; text-transform: uppercase; letter-spacing: .06e
   cursor: pointer;
 }
 .icon-btn.selected { border-color: var(--accent-2); background: #76d3d1; }
+/* Claimed by another player — greyed back and not clickable. */
+.icon-btn.taken { opacity: 0.3; background: #3a3670; cursor: not-allowed; }
 
 .btn {
   border: none;

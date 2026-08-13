@@ -1,4 +1,5 @@
 const { createWordDeck, WORDS } = require('./words');
+const { isIcon, pickIcon } = require('./icons');
 
 const MIN_PLAYERS = 3;
 const MAX_PLAYERS = 8;
@@ -61,12 +62,18 @@ class Room {
     return this.players.find((p) => p.id === playerId);
   }
 
+  takenIcons(exceptPlayerId) {
+    return this.players.filter((p) => p.id !== exceptPlayerId).map((p) => p.icon);
+  }
+
   addPlayer({ name, icon }) {
     const id = makeId();
     const player = {
       id,
       name: sanitizeName(name),
-      icon: icon || '🙂',
+      // Falls back to a free icon if this one was already claimed, so two
+      // players can never share one. The client tells the player if it changed.
+      icon: pickIcon(icon, this.takenIcons()),
       connected: true,
       score: { correctAsActive: 0, roundsAsActive: 0, cluesGiven: 0, cluesAccepted: 0 }
     };
@@ -80,6 +87,18 @@ class Room {
     if (this.hostId === playerId) {
       this.hostId = this.players[0] ? this.players[0].id : null;
     }
+  }
+
+  // Lobby-only: once the game is running, icons are how players attribute the
+  // clues they're looking at, so swapping mid-game would rewrite that history.
+  setIcon(playerId, icon) {
+    if (this.status !== 'lobby') throw new Error('You can only change your icon in the lobby.');
+    const player = this.getPlayer(playerId);
+    if (!player) throw new Error('You are not in this room.');
+    if (!isIcon(icon)) throw new Error('That is not one of the icons.');
+    if (this.takenIcons(playerId).includes(icon)) throw new Error('Someone else already picked that one.');
+    player.icon = icon;
+    this.touch();
   }
 
   canStart() {

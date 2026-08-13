@@ -5,6 +5,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 const { RoomManager } = require('./rooms');
 const { MIN_PLAYERS, MAX_PLAYERS, ROUND_OPTIONS } = require('./game');
+const { ICONS } = require('./icons');
 
 const PORT = process.env.PORT || 3000;
 
@@ -42,6 +43,8 @@ app.get('/', serveIndex);
 app.get('/index.html', serveIndex);
 app.use(express.static(PUBLIC_DIR, { index: false }));
 app.get('/health', (req, res) => res.json({ ok: true }));
+// The client draws its icon grid from this so the two can't drift apart.
+app.get('/api/icons', (req, res) => res.json({ icons: ICONS }));
 
 const manager = new RoomManager();
 
@@ -113,6 +116,14 @@ io.on('connection', (socket) => {
     } catch (err) {
       ack && ack({ ok: false, error: err.message });
     }
+  });
+
+  socket.on('change_icon', ({ icon } = {}, ack) => {
+    withRoom(socket, ack, (room, playerId) => {
+      room.setIcon(playerId, icon);
+      broadcastRoom(room);
+      ack && ack({ ok: true });
+    });
   });
 
   socket.on('start_game', (_payload, ack) => {
