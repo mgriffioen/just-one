@@ -648,6 +648,23 @@ h3 { margin: 0; font-size: 15px; text-transform: uppercase; letter-spacing: .06e
 }
 .chip.active { background: var(--accent-2); color: #1c1a3a; border-color: var(--accent-2); }
 
+.stepper { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.stepper-btn {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background: #100e26;
+  color: var(--text);
+  cursor: pointer;
+}
+.stepper-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.stepper-value { font-size: 28px; font-weight: 800; min-width: 3ch; text-align: center; }
+
 .how-to {
   background: var(--card);
   border: 1px solid var(--card-border);

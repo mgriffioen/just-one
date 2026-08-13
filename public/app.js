@@ -174,13 +174,28 @@
   const savedName = store.get('justone_name');
   if (savedName) $('input-name').value = savedName;
 
+  const MIN_ROUNDS = 1;
+  const MAX_ROUNDS = 50;
+  const clampRounds = (n) => Math.min(MAX_ROUNDS, Math.max(MIN_ROUNDS, Math.floor(Number(n) || 0)));
+
   let selectedRounds = 13;
+  let customRounds = false;
   $('rounds-grid').addEventListener('click', (e) => {
     const btn = e.target.closest('.chip');
     if (!btn) return;
-    selectedRounds = Number(btn.dataset.rounds);
+    customRounds = btn.dataset.rounds === 'custom';
+    $('input-rounds').classList.toggle('hidden', !customRounds);
+    if (customRounds) {
+      selectedRounds = clampRounds($('input-rounds').value);
+      $('input-rounds').focus();
+    } else {
+      selectedRounds = Number(btn.dataset.rounds);
+    }
     $('rounds-grid').querySelectorAll('.chip').forEach((c) => c.classList.remove('active'));
     btn.classList.add('active');
+  });
+  $('input-rounds').addEventListener('input', () => {
+    if (customRounds) selectedRounds = clampRounds($('input-rounds').value);
   });
 
   $('btn-show-create').addEventListener('click', () => {
@@ -236,6 +251,30 @@
   });
 
   // ---------- lobby ----------
+  // Describes how a round count divides among the players who've joined, which
+  // is the whole reason to tune it here rather than on the home screen.
+  function roundsHint(rounds, playerCount) {
+    if (!playerCount) return '';
+    if (rounds < playerCount) {
+      return `Only ${rounds} of the ${playerCount} players will get a turn guessing.`;
+    }
+    const times = (n) => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`);
+    const each = Math.floor(rounds / playerCount);
+    const extra = rounds % playerCount;
+    if (extra === 0) return `Everyone guesses exactly ${times(each)}.`;
+    return `${extra} player${extra === 1 ? '' : 's'} guess ${times(each + 1)}, the other ` +
+           `${playerCount - extra} guess ${times(each)}.`;
+  }
+
+  function nudgeRounds(delta) {
+    const view = state.view;
+    if (!view) return;
+    const next = clampRounds(view.totalRounds + delta);
+    if (next !== view.totalRounds) emitWithAck('set_rounds', { totalRounds: next });
+  }
+  $('btn-rounds-down').addEventListener('click', () => nudgeRounds(-1));
+  $('btn-rounds-up').addEventListener('click', () => nudgeRounds(1));
+
   $('btn-start').addEventListener('click', () => emitWithAck('start_game', {}));
   $('btn-leave-lobby').addEventListener('click', leaveRoom);
   $('btn-new-game').addEventListener('click', leaveRoom);
@@ -329,6 +368,13 @@
     buildLobbyIconGrid(view);
 
     const isHost = view.you && view.you.isHost;
+    $('lobby-rounds-value').textContent = view.totalRounds;
+    $('lobby-rounds-hint').textContent = roundsHint(view.totalRounds, view.players.length);
+    $('btn-rounds-down').classList.toggle('hidden', !isHost);
+    $('btn-rounds-up').classList.toggle('hidden', !isHost);
+    $('btn-rounds-down').disabled = view.totalRounds <= MIN_ROUNDS;
+    $('btn-rounds-up').disabled = view.totalRounds >= MAX_ROUNDS;
+
     const canStart = view.players.length >= 3;
     $('btn-start').classList.toggle('hidden', !isHost);
     $('btn-start').disabled = !canStart;

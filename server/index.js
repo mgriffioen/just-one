@@ -4,7 +4,7 @@ const http = require('http');
 const express = require('express');
 const { Server } = require('socket.io');
 const { RoomManager } = require('./rooms');
-const { MIN_PLAYERS, MAX_PLAYERS, ROUND_OPTIONS } = require('./game');
+const { MIN_PLAYERS, MAX_PLAYERS, MIN_ROUNDS, MAX_ROUNDS } = require('./game');
 const { ICONS } = require('./icons');
 
 const PORT = process.env.PORT || 3000;
@@ -67,8 +67,8 @@ io.on('connection', (socket) => {
 
   socket.on('create_room', ({ name, icon, totalRounds } = {}, ack) => {
     try {
-      const rounds = ROUND_OPTIONS.includes(Number(totalRounds)) ? Number(totalRounds) : undefined;
-      const room = manager.create(rounds);
+      // Any count is allowed; the room clamps it to the supported range.
+      const room = manager.create(totalRounds);
       const player = room.addPlayer({ name, icon });
       player.socketId = socket.id;
       socket.data.roomCode = room.code;
@@ -116,6 +116,15 @@ io.on('connection', (socket) => {
     } catch (err) {
       ack && ack({ ok: false, error: err.message });
     }
+  });
+
+  socket.on('set_rounds', ({ totalRounds } = {}, ack) => {
+    withRoom(socket, ack, (room, playerId) => {
+      if (room.hostId !== playerId) throw new Error('Only the host can change the round count.');
+      const applied = room.setTotalRounds(totalRounds);
+      broadcastRoom(room);
+      ack && ack({ ok: true, totalRounds: applied });
+    });
   });
 
   socket.on('change_icon', ({ icon } = {}, ack) => {

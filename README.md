@@ -18,9 +18,14 @@ JUST *cl*ONE is fully cooperative. Each round:
 3. Clues that exactly match each other are **automatically removed** —
    too obvious, or duplicated, means it's tossed.
 4. The guesser sees whatever clues survive and gets **one guess**.
-5. The group's score is simply how many of the rounds (5, 8, or 13 —
-   host's choice) were guessed correctly. Everyone rotates through being
-   the guesser.
+5. The group's score is simply how many of the rounds were guessed
+   correctly. Everyone rotates through being the guesser.
+
+The host picks the round count — 5, 8 and 13 are one tap, or set any
+number from 1 to 50. It can also be adjusted in the lobby, where the
+lobby shows how the count divides among the players who actually turned
+up ("Everyone guesses exactly twice"), so you can match it to the group:
+8 players over 16 rounds gives everyone two turns as guesser.
 
 At the end, everyone sees the team's final score, a recap of every secret
 word from the round (with who was guessing and how it went), plus a
