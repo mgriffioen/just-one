@@ -1,9 +1,24 @@
 const { createWordDeck, WORDS } = require('./words');
+const { isIcon, pickIcon } = require('./icons');
 
 const MIN_PLAYERS = 3;
 const MAX_PLAYERS = 8;
-const ROUND_OPTIONS = [5, 8, 13];
+const ROUND_OPTIONS = [5, 8, 13]; // quick presets offered in the UI
 const DEFAULT_ROUNDS = 13;
+// The host can pick any count in this range, not just a preset — e.g. 16 so
+// that all 8 players guess exactly twice. The ceiling is well under the word
+// list size, so a game can never run the deck dry.
+const MIN_ROUNDS = 1;
+const MAX_ROUNDS = 50;
+
+function normalizeRounds(value) {
+  // Absent means "use the default"; Number(null) is 0, which would otherwise
+  // clamp to a one-round game.
+  if (value === null || value === undefined || value === '') return DEFAULT_ROUNDS;
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return DEFAULT_ROUNDS;
+  return Math.min(MAX_ROUNDS, Math.max(MIN_ROUNDS, n));
+}
 
 const RATING_SCALE = [
   { max: 2, label: 'A tough crowd! Try again?' },
@@ -41,7 +56,7 @@ class Room {
     this.players = []; // ordered list, order = turn rotation
     this.hostId = null;
     this.status = 'lobby'; // lobby | clue | reveal | guess | result | gameover
-    this.totalRounds = ROUND_OPTIONS.includes(totalRounds) ? totalRounds : DEFAULT_ROUNDS;
+    this.totalRounds = normalizeRounds(totalRounds);
     this.roundNumber = 0; // 1-indexed once started
     this.activePlayerIndex = -1;
     this.recentWords = []; // words this room has already played, across games
@@ -61,12 +76,18 @@ class Room {
     return this.players.find((p) => p.id === playerId);
   }
 
+  takenIcons(exceptPlayerId) {
+    return this.players.filter((p) => p.id !== exceptPlayerId).map((p) => p.icon);
+  }
+
   addPlayer({ name, icon }) {
     const id = makeId();
     const player = {
       id,
       name: sanitizeName(name),
-      icon: icon || '🙂',
+      // Falls back to a free icon if this one was already claimed, so two
+      // players can never share one. The client tells the player if it changed.
+      icon: pickIcon(icon, this.takenIcons()),
       connected: true,
       score: { correctAsActive: 0, roundsAsActive: 0, cluesGiven: 0, cluesAccepted: 0 }
     };
@@ -80,6 +101,27 @@ class Room {
     if (this.hostId === playerId) {
       this.hostId = this.players[0] ? this.players[0].id : null;
     }
+  }
+
+  // Lobby-only: the round count is fixed once play starts, since rounds already
+  // played would make a lower total nonsensical.
+  setTotalRounds(value) {
+    if (this.status !== 'lobby') throw new Error('You can only change the round count in the lobby.');
+    this.totalRounds = normalizeRounds(value);
+    this.touch();
+    return this.totalRounds;
+  }
+
+  // Lobby-only: once the game is running, icons are how players attribute the
+  // clues they're looking at, so swapping mid-game would rewrite that history.
+  setIcon(playerId, icon) {
+    if (this.status !== 'lobby') throw new Error('You can only change your icon in the lobby.');
+    const player = this.getPlayer(playerId);
+    if (!player) throw new Error('You are not in this room.');
+    if (!isIcon(icon)) throw new Error('That is not one of the icons.');
+    if (this.takenIcons(playerId).includes(icon)) throw new Error('Someone else already picked that one.');
+    player.icon = icon;
+    this.touch();
   }
 
   canStart() {
@@ -339,4 +381,12 @@ function sanitizeName(name) {
   return clean || 'Player';
 }
 
-module.exports = { Room, MIN_PLAYERS, MAX_PLAYERS, ROUND_OPTIONS, DEFAULT_ROUNDS };
+module.exports = {
+  Room,
+  MIN_PLAYERS,
+  MAX_PLAYERS,
+  ROUND_OPTIONS,
+  DEFAULT_ROUNDS,
+  MIN_ROUNDS,
+  MAX_ROUNDS
+};

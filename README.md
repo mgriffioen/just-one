@@ -18,9 +18,14 @@ JUST *cl*ONE is fully cooperative. Each round:
 3. Clues that exactly match each other are **automatically removed** —
    too obvious, or duplicated, means it's tossed.
 4. The guesser sees whatever clues survive and gets **one guess**.
-5. The group's score is simply how many of the rounds (5, 8, or 13 —
-   host's choice) were guessed correctly. Everyone rotates through being
-   the guesser.
+5. The group's score is simply how many of the rounds were guessed
+   correctly. Everyone rotates through being the guesser.
+
+The host picks the round count — 5, 8 and 13 are one tap, or set any
+number from 1 to 50. It can also be adjusted in the lobby, where the
+lobby shows how the count divides among the players who actually turned
+up ("Everyone guesses exactly twice"), so you can match it to the group:
+8 players over 16 rounds gives everyone two turns as guesser.
 
 At the end, everyone sees the team's final score, a recap of every secret
 word from the round (with who was guessing and how it went), plus a
@@ -78,6 +83,7 @@ server/
   rooms.js   In-memory room registry, room-code generation, cleanup
   game.js    Room/game state machine: rounds, clue validation, scoring
   words.js   Original word list + shuffled deck
+  icons.js   Player icon list (served to the client) + per-room uniqueness
 public/
   index.html Single-page app shell (all screens, mobile-first)
   styles.css Dark, mobile-first party theme
@@ -116,6 +122,10 @@ npx playwright screenshot --viewport-size=1200,630 \
 - A clue must be a single word (no spaces) — the client and server both
   enforce this.
 - Duplicate clues are matched case-insensitively.
+- No two players in a room share an icon — it's how you tell whose clue is
+  whose. The server assigns a free one if the icon you picked was already
+  claimed (it'll tell you), and the lobby lets you switch to any icon that
+  isn't greyed out. Icons are locked once the game starts.
 - A room never serves the same secret word twice — including across
   **"play again"** — until it has worked through most of the list, so a
   group playing several games in a row keeps getting fresh words.

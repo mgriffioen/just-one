@@ -1,12 +1,14 @@
 (() => {
-  const ICONS = ['💋','🪱','🦈','💀','🥏','🧇','🦄','🛝','🐘','🫠','🍒','🫈',
-                 '🌈','🔥','🥬','🌭','🍕','🍩','💅','🥃','🚀','🍺','🫪','🍆'];
+  // The server owns the icon list (see server/icons.js) so it can enforce that
+  // no two players in a room share one; it's fetched below before the grid is
+  // drawn, rather than duplicated here where the two copies could drift.
+  let ICONS = [];
 
   const $ = (id) => document.getElementById(id);
   const socket = io();
 
   let state = {
-    selectedIcon: ICONS[Math.floor(Math.random() * ICONS.length)],
+    selectedIcon: null,
     view: null,
     joining: false
   };
@@ -100,22 +102,52 @@
     gameover: 'gameover'
   };
 
-  // ---------- icon grid (home) ----------
+  // ---------- icon grids ----------
+  function iconButton(icon, { selected, taken, onPick }) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-btn' + (selected ? ' selected' : '') + (taken ? ' taken' : '');
+    btn.textContent = icon;
+    btn.disabled = !!taken;
+    if (taken) btn.title = 'Already taken';
+    else btn.addEventListener('click', onPick);
+    return btn;
+  }
+
+  // Home: nothing is taken yet because we don't know the room, so the server
+  // may still hand out a different icon on join. See notifyIfIconChanged.
   function buildIconGrid() {
     const grid = $('icon-grid');
     grid.innerHTML = '';
-    ICONS.forEach((icon) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'icon-btn' + (icon === state.selectedIcon ? ' selected' : '');
-      btn.textContent = icon;
-      btn.addEventListener('click', () => {
-        state.selectedIcon = icon;
-        grid.querySelectorAll('.icon-btn').forEach((b) => b.classList.remove('selected'));
-        btn.classList.add('selected');
-      });
-      grid.appendChild(btn);
-    });
+    ICONS.forEach((icon) => grid.appendChild(iconButton(icon, {
+      selected: icon === state.selectedIcon,
+      taken: false,
+      onPick: () => { state.selectedIcon = icon; buildIconGrid(); }
+    })));
+  }
+
+  // Lobby: now we know the room, so everyone else's icons are ruled out.
+  function buildLobbyIconGrid(view) {
+    const grid = $('lobby-icon-grid');
+    const mine = view.you ? view.you.icon : null;
+    const taken = new Set(view.players.map((p) => p.icon));
+    grid.innerHTML = '';
+    ICONS.forEach((icon) => grid.appendChild(iconButton(icon, {
+      selected: icon === mine,
+      taken: icon !== mine && taken.has(icon),
+      onPick: () => emitWithAck('change_icon', { icon })
+    })));
+  }
+
+  // The server picks a free icon when the one you chose is already claimed, so
+  // say so rather than silently swapping it under you.
+  function notifyIfIconChanged(view) {
+    const assigned = view && view.you && view.you.icon;
+    if (!assigned) return;
+    if (state.selectedIcon && assigned !== state.selectedIcon) {
+      toast(`${state.selectedIcon} was taken — you're ${assigned}`);
+    }
+    state.selectedIcon = assigned;
   }
 
   function emitWithAck(event, payload) {
@@ -129,18 +161,41 @@
   }
 
   // ---------- home screen wiring ----------
-  buildIconGrid();
+  fetch('/api/icons')
+    .then((res) => res.json())
+    .then(({ icons }) => {
+      ICONS = Array.isArray(icons) ? icons : [];
+      state.selectedIcon = ICONS[Math.floor(Math.random() * ICONS.length)] || null;
+      buildIconGrid();
+      if (state.view && state.view.status === 'lobby') buildLobbyIconGrid(state.view);
+    })
+    .catch(() => toast('Could not load the player icons — try refreshing.'));
 
   const savedName = store.get('justone_name');
   if (savedName) $('input-name').value = savedName;
 
+  const MIN_ROUNDS = 1;
+  const MAX_ROUNDS = 50;
+  const clampRounds = (n) => Math.min(MAX_ROUNDS, Math.max(MIN_ROUNDS, Math.floor(Number(n) || 0)));
+
   let selectedRounds = 13;
+  let customRounds = false;
   $('rounds-grid').addEventListener('click', (e) => {
     const btn = e.target.closest('.chip');
     if (!btn) return;
-    selectedRounds = Number(btn.dataset.rounds);
+    customRounds = btn.dataset.rounds === 'custom';
+    $('input-rounds').classList.toggle('hidden', !customRounds);
+    if (customRounds) {
+      selectedRounds = clampRounds($('input-rounds').value);
+      $('input-rounds').focus();
+    } else {
+      selectedRounds = Number(btn.dataset.rounds);
+    }
     $('rounds-grid').querySelectorAll('.chip').forEach((c) => c.classList.remove('active'));
     btn.classList.add('active');
+  });
+  $('input-rounds').addEventListener('input', () => {
+    if (customRounds) selectedRounds = clampRounds($('input-rounds').value);
   });
 
   $('btn-show-create').addEventListener('click', () => {
@@ -170,6 +225,7 @@
     const res = await emitWithAck('create_room', { name, icon: state.selectedIcon, totalRounds: selectedRounds });
     state.joining = false;
     if (res.ok) {
+      notifyIfIconChanged(res.view);
       saveSession(res.roomCode, res.playerId);
       render(res.view);
     }
@@ -184,6 +240,7 @@
     const res = await emitWithAck('join_room', { code, name, icon: state.selectedIcon });
     state.joining = false;
     if (res.ok) {
+      notifyIfIconChanged(res.view);
       saveSession(res.roomCode, res.playerId);
       render(res.view);
     }
@@ -194,6 +251,30 @@
   });
 
   // ---------- lobby ----------
+  // Describes how a round count divides among the players who've joined, which
+  // is the whole reason to tune it here rather than on the home screen.
+  function roundsHint(rounds, playerCount) {
+    if (!playerCount) return '';
+    if (rounds < playerCount) {
+      return `Only ${rounds} of the ${playerCount} players will get a turn guessing.`;
+    }
+    const times = (n) => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`);
+    const each = Math.floor(rounds / playerCount);
+    const extra = rounds % playerCount;
+    if (extra === 0) return `Everyone guesses exactly ${times(each)}.`;
+    return `${extra} player${extra === 1 ? '' : 's'} guess ${times(each + 1)}, the other ` +
+           `${playerCount - extra} guess ${times(each)}.`;
+  }
+
+  function nudgeRounds(delta) {
+    const view = state.view;
+    if (!view) return;
+    const next = clampRounds(view.totalRounds + delta);
+    if (next !== view.totalRounds) emitWithAck('set_rounds', { totalRounds: next });
+  }
+  $('btn-rounds-down').addEventListener('click', () => nudgeRounds(-1));
+  $('btn-rounds-up').addEventListener('click', () => nudgeRounds(1));
+
   $('btn-start').addEventListener('click', () => emitWithAck('start_game', {}));
   $('btn-leave-lobby').addEventListener('click', leaveRoom);
   $('btn-new-game').addEventListener('click', leaveRoom);
@@ -284,8 +365,16 @@
     const list = $('lobby-players');
     list.innerHTML = '';
     view.players.forEach((p) => list.appendChild(playerRow(p)));
+    buildLobbyIconGrid(view);
 
     const isHost = view.you && view.you.isHost;
+    $('lobby-rounds-value').textContent = view.totalRounds;
+    $('lobby-rounds-hint').textContent = roundsHint(view.totalRounds, view.players.length);
+    $('btn-rounds-down').classList.toggle('hidden', !isHost);
+    $('btn-rounds-up').classList.toggle('hidden', !isHost);
+    $('btn-rounds-down').disabled = view.totalRounds <= MIN_ROUNDS;
+    $('btn-rounds-up').disabled = view.totalRounds >= MAX_ROUNDS;
+
     const canStart = view.players.length >= 3;
     $('btn-start').classList.toggle('hidden', !isHost);
     $('btn-start').disabled = !canStart;
@@ -465,8 +554,12 @@
   socket.on('connect', () => {
     if (session && session.roomCode && session.playerId) {
       emitWithAck('rejoin', { code: session.roomCode, playerId: session.playerId }).then((res) => {
-        if (res.ok) render(res.view);
-        else clearSession();
+        if (res.ok) {
+          // Adopt the icon we already have in this room, silently — a reload
+          // re-randomised state.selectedIcon, which isn't a change worth a toast.
+          if (res.view && res.view.you) state.selectedIcon = res.view.you.icon;
+          render(res.view);
+        } else clearSession();
       });
     }
   });

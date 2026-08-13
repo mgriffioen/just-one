@@ -68,7 +68,12 @@
             <button type="button" class="chip" data-rounds="5">5</button>
             <button type="button" class="chip" data-rounds="8">8</button>
             <button type="button" class="chip active" data-rounds="13">13</button>
+            <button type="button" class="chip" data-rounds="custom">Custom</button>
           </div>
+          <input id="input-rounds" class="code-input hidden" type="number"
+                 inputmode="numeric" min="1" max="50" value="16" />
+          <p class="hint">You can also change this in the lobby, once you can
+             see how many players joined.</p>
         </label>
         <button id="btn-create" class="btn btn-primary btn-block">Create room</button>
       </div>
@@ -104,6 +109,20 @@
     <div class="card">
       <h3>Players</h3>
       <ul id="lobby-players" class="player-list"></ul>
+      <div class="field">
+        <span>Rounds</span>
+        <div class="stepper">
+          <button type="button" id="btn-rounds-down" class="stepper-btn hidden">&minus;</button>
+          <span id="lobby-rounds-value" class="stepper-value">13</span>
+          <button type="button" id="btn-rounds-up" class="stepper-btn hidden">+</button>
+        </div>
+        <p class="hint" id="lobby-rounds-hint"></p>
+      </div>
+      <div class="field">
+        <span>Your icon</span>
+        <div id="lobby-icon-grid" class="icon-grid"></div>
+        <p class="hint">Everyone needs a different one &mdash; greyed-out icons are taken.</p>
+      </div>
       <p id="lobby-wait" class="hint">Waiting for the host to start the game&hellip;</p>
       <button id="btn-start" class="btn btn-primary btn-block hidden">Start game</button>
       <p id="lobby-min-hint" class="hint hidden">Need at least 3 players to start.</p>
