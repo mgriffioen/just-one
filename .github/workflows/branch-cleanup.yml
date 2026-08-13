@@ -1,0 +1,111 @@
+name: Branch cleanup
+
+# Keeps merged feature branches from piling up.
+#
+#   - on a merged PR: deletes the branch it came from.
+#   - run manually:   sweeps every branch already fully merged into the
+#                     default branch.
+#
+# GitHub has a built-in setting for the first half — Settings → General →
+# "Automatically delete head branches" — which does the same thing with no
+# workflow to maintain. This exists because that setting can't sweep the
+# branches that have already accumulated, and because keeping the rule in the
+# repo makes it visible. If you turn the setting on, the delete-merged-head
+# job below is redundant and can be dropped.
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+
+# deleteRef needs write access to refs; nothing here reads code.
+permissions:
+  contents: write
+
+jobs:
+  delete-merged-head:
+    name: Delete the merged branch
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const branch = pr.head.ref;
+            const thisRepo = `${context.repo.owner}/${context.repo.repo}`;
+
+            if (pr.head.repo?.full_name !== thisRepo) {
+              core.info(`${branch} lives in a fork — not ours to delete.`);
+              return;
+            }
+            if (branch === context.payload.repository.default_branch) {
+              core.info('Refusing to delete the default branch.');
+              return;
+            }
+
+            try {
+              await github.rest.git.deleteRef({ ...context.repo, ref: `heads/${branch}` });
+              core.notice(`Deleted ${branch}.`);
+            } catch (err) {
+              // Already gone (someone ticked the repo setting, or deleted it by
+              // hand) is a success, not a failure.
+              if (err.status === 422 || err.status === 404) core.info(`${branch} was already deleted.`);
+              else throw err;
+            }
+
+  sweep-merged:
+    name: Sweep already-merged branches
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { data: repository } = await github.rest.repos.get({ owner, repo });
+            const base = repository.default_branch;
+
+            // A branch with an open PR is still in use, whatever its commits say.
+            const openPrs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const inUse = new Set(openPrs.map((pr) => pr.head.ref));
+
+            const branches = await github.paginate(github.rest.repos.listBranches, {
+              owner, repo, per_page: 100
+            });
+
+            const deleted = [];
+            const kept = [];
+
+            for (const branch of branches) {
+              const name = branch.name;
+              if (name === base) continue;
+              if (branch.protected) { kept.push(`${name} — protected`); continue; }
+              if (inUse.has(name)) { kept.push(`${name} — has an open PR`); continue; }
+
+              // ahead_by counts commits on the branch that aren't in base, so 0
+              // means every commit already landed. Anything else stays put —
+              // this job never discards work.
+              const { data: cmp } = await github.rest.repos.compareCommitsWithBasehead({
+                owner, repo, basehead: `${base}...${name}`
+              });
+              if (cmp.ahead_by !== 0) {
+                kept.push(`${name} — ${cmp.ahead_by} commit(s) not in ${base}`);
+                continue;
+              }
+
+              await github.rest.git.deleteRef({ owner, repo, ref: `heads/${name}` });
+              deleted.push(name);
+            }
+
+            core.notice(`Deleted ${deleted.length} merged branch(es): ${deleted.join(', ') || 'none'}`);
+            await core.summary
+              .addHeading('Branch cleanup')
+              .addRaw(`Base branch: <code>${base}</code>`)
+              .addHeading('Deleted', 3)
+              .addList(deleted.length ? deleted : ['nothing to delete'])
+              .addHeading('Kept', 3)
+              .addList(kept.length ? kept : ['nothing else'])
+              .write();
